@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Corridas">
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="./manifest.json">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
@@ -1035,6 +1035,7 @@ window.compartilharWhatsApp = async function() {
       const tipo = c.tipo === 'agendada' ? '📅' : '⚡';
       msg += `${i + 1}. ${tipo} ${c.cliente}${c.obs ? ' — ' + c.obs : ''}\n`;
     });
+    msg += `\n`;
   }
 
   try {

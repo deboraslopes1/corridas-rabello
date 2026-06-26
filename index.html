@@ -11,6 +11,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Corridas">
 <link rel="manifest" href="./manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600&display=swap" rel="stylesheet">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
@@ -726,14 +729,18 @@
 
 <div class="toast" id="toast"></div>
 
-<footer style="border-top:1px solid var(--border);padding:14px 20px;margin-top:8px;">
-  <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text2);margin-bottom:3px;">
-    Lopes · Análise e Gestão de Dados
-  </div>
-  <div style="font-size:0.68rem;color:var(--text3);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-    <span>Desenvolvido por Débora Lopes</span>
-    <span style="opacity:0.4;">|</span>
-    <span>Corridas · Glaucia Rabello © <span id="footer-ano">2026</span></span>
+<footer style="padding:20px 28px;font-family:'Geist',system-ui,sans-serif;margin-top:8px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div style="font-size:0.88rem;color:var(--text);line-height:1.4;">
+        <span style="font-weight:400;">Developed by </span><span style="font-weight:600;">Datum Studio</span>
+      </div>
+    </div>
+    <div style="text-align:right;color:var(--text2);font-size:0.72rem;line-height:1.7;">
+      <div style="font-weight:500;">Controle de Corridas</div>
+      <div style="opacity:0.8;">v1.0.0</div>
+      <div>© <span id="footer-ano">2026</span></div>
+    </div>
   </div>
 </footer>
 
@@ -1187,6 +1194,7 @@ window.confirmarDelete = async function() {
 // ── INIT ──
 setHeaderDate();
 loadCorridas();
+document.getElementById('footer-ano').textContent = new Date().getFullYear();
 const inputDataCopia = document.getElementById('data-copia');
 if (inputDataCopia) inputDataCopia.value = hoje();
 

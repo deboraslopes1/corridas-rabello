@@ -670,12 +670,25 @@
 <div class="page" id="page-clientes">
   <div class="card" style="background:var(--accent-light);border-color:var(--accent);">
     <div style="font-size:12px;color:var(--accent-dark);line-height:1.5;">
-      💡 Aqui você vê se um mesmo cliente está pagando valores diferentes pela mesma corrida ao longo do tempo. Útil para cobrar equilíbrio de preço junto à empresa.
+      💡 Aqui você vê se um mesmo cliente está pagando valores diferentes pela mesma corrida. Útil para cobrar equilíbrio de preço junto à empresa.
     </div>
   </div>
+
+  <div class="card">
+    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">Filtrar período (opcional)</div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="date" id="clientes-data-ini" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:Inter,sans-serif;color:var(--text);background:var(--surface);outline:none;" onchange="renderClientes()">
+      <span style="color:var(--text3);font-size:12px;">até</span>
+      <input type="date" id="clientes-data-fim" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:Inter,sans-serif;color:var(--text);background:var(--surface);outline:none;" onchange="renderClientes()">
+    </div>
+    <div id="clientes-filtro-ativo" style="display:none;margin-top:8px;">
+      <button onclick="limparFiltroClientes()" style="font-size:11px;color:var(--accent);background:none;border:none;cursor:pointer;font-weight:600;padding:0;">✕ Limpar filtro</button>
+    </div>
+  </div>
+
   <div id="lista-clientes"><div class="loading">Carregando...</div></div>
   <button class="btn-share" id="btn-divergencias" onclick="copiarDivergencias()" style="display:none;background:var(--warning);">
-    <span>⚠️</span> Copiar divergências para WhatsApp
+    <span>⚠️</span> Copiar todas as divergências
   </button>
 </div>
 
@@ -1216,9 +1229,15 @@ window.confirmarDelete = async function() {
 const LIMIAR_DIVERGENCIA = 0.15; // 15% de variação considerado divergente
 
 function calcularClientes() {
+  const dataIni = document.getElementById('clientes-data-ini')?.value;
+  const dataFim = document.getElementById('clientes-data-fim')?.value;
+
   const porCliente = {};
   todasCorridas.forEach(c => {
     if (c.valor == null) return; // só considera corridas com valor preenchido
+    const diaC = isoDate(c.timestamp.toDate());
+    if (dataIni && diaC < dataIni) return;
+    if (dataFim && diaC > dataFim) return;
     const nome = c.cliente.trim();
     if (!porCliente[nome]) porCliente[nome] = [];
     porCliente[nome].push({ valor: Number(c.valor), data: c.timestamp.toDate(), tipo: c.tipo, obs: c.obs, id: c.id });
@@ -1248,9 +1267,14 @@ function renderClientes() {
   const clientes = calcularClientes();
   const el = document.getElementById('lista-clientes');
   const btnDiv = document.getElementById('btn-divergencias');
+  const filtroEl = document.getElementById('clientes-filtro-ativo');
+
+  const dataIni = document.getElementById('clientes-data-ini')?.value;
+  const dataFim = document.getElementById('clientes-data-fim')?.value;
+  if (filtroEl) filtroEl.style.display = (dataIni || dataFim) ? 'block' : 'none';
 
   if (clientes.length === 0) {
-    el.innerHTML = `<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">Nenhuma corrida com valor registrado ainda.</div></div>`;
+    el.innerHTML = `<div class="empty"><div class="empty-icon">👥</div><div class="empty-text">Nenhuma corrida com valor registrado ${(dataIni||dataFim) ? 'neste período' : 'ainda'}.</div></div>`;
     btnDiv.style.display = 'none';
     return;
   }
@@ -1258,11 +1282,11 @@ function renderClientes() {
   const temDivergencia = clientes.some(c => c.divergente);
   btnDiv.style.display = temDivergencia ? 'flex' : 'none';
 
-  el.innerHTML = clientes.map(c => {
+  el.innerHTML = clientes.map((c, idx) => {
     const pct = Math.round(c.variacao * 100);
     return `
-      <div class="card" style="${c.divergente ? 'border-color:var(--warning);background:var(--warning-light);' : ''}cursor:pointer;" onclick="toggleClienteDetalhe(this)">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="card" style="${c.divergente ? 'border-color:var(--warning);background:var(--warning-light);' : ''}">
+        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleClienteDetalhe(this)">
           <div>
             <div style="font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px;">
               ${c.divergente ? '🔶' : ''} ${c.nome}
@@ -1285,22 +1309,76 @@ function renderClientes() {
               <span style="font-family:'DM Mono',monospace;font-weight:500;color:var(--text);">${fmtBRL(cc.valor)}</span>
             </div>
           `).join('')}
+          ${c.divergente ? `
+          <button onclick="event.stopPropagation();copiarDivergenciaCliente('${c.nome.replace(/'/g,"\\'")}')" style="width:100%;margin-top:10px;padding:9px;background:var(--warning);color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;">
+            📋 Copiar esta divergência
+          </button>` : ''}
         </div>
       </div>
     `;
   }).join('');
 }
 
-window.toggleClienteDetalhe = function(card) {
+window.toggleClienteDetalhe = function(headerEl) {
+  const card = headerEl.closest('.card');
   const det = card.querySelector('.cliente-detalhe');
   det.style.display = det.style.display === 'none' ? 'block' : 'none';
+};
+
+window.limparFiltroClientes = function() {
+  document.getElementById('clientes-data-ini').value = '';
+  document.getElementById('clientes-data-fim').value = '';
+  renderClientes();
+};
+
+function montarMsgDivergenciaCliente(c) {
+  const pct = Math.round(c.variacao * 100);
+  const dataIni = document.getElementById('clientes-data-ini')?.value;
+  const dataFim = document.getElementById('clientes-data-fim')?.value;
+  let periodoTxt = '';
+  if (dataIni || dataFim) {
+    periodoTxt = ` (período: ${dataIni ? fmtData(dataIni+'T12:00:00') : 'início'} a ${dataFim ? fmtData(dataFim+'T12:00:00') : 'hoje'})`;
+  }
+  let msg = `⚠️ *Divergência de valor — ${c.nome}*${periodoTxt}\n`;
+  msg += `📅 Levantamento em ${new Date().toLocaleDateString('pt-BR')}\n\n`;
+  msg += `Variação de ${pct}% entre as corridas (${fmtBRL(c.min)} a ${fmtBRL(c.max)})\n\n`;
+  c.corridas.forEach(cc => {
+    msg += `• ${fmtData(cc.data)} — ${fmtBRL(cc.valor)}${cc.obs ? ' (' + cc.obs + ')' : ''}\n`;
+  });
+  msg += `\nSolicito revisão para equilíbrio de valor nessa corrida. 🙏\n`;
+  return msg;
+}
+
+window.copiarDivergenciaCliente = async function(nome) {
+  const clientes = calcularClientes();
+  const c = clientes.find(cl => cl.nome === nome);
+  if (!c) { showToast('Cliente não encontrado.'); return; }
+  const msg = montarMsgDivergenciaCliente(c);
+  try {
+    await navigator.clipboard.writeText(msg);
+    showToast('✅ Copiado! Cole no WhatsApp.');
+  } catch(e) {
+    const ta = document.createElement('textarea');
+    ta.value = msg; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('✅ Copiado! Cole no WhatsApp.');
+  }
 };
 
 window.copiarDivergencias = async function() {
   const clientes = calcularClientes().filter(c => c.divergente);
   if (clientes.length === 0) { showToast('Nenhuma divergência encontrada.'); return; }
 
-  let msg = `⚠️ *Divergências de valores por cliente*\n`;
+  const dataIni = document.getElementById('clientes-data-ini')?.value;
+  const dataFim = document.getElementById('clientes-data-fim')?.value;
+  let periodoTxt = '';
+  if (dataIni || dataFim) {
+    periodoTxt = ` (período: ${dataIni ? fmtData(dataIni+'T12:00:00') : 'início'} a ${dataFim ? fmtData(dataFim+'T12:00:00') : 'hoje'})`;
+  }
+
+  let msg = `⚠️ *Divergências de valores por cliente*${periodoTxt}\n`;
   msg += `📅 Levantamento em ${new Date().toLocaleDateString('pt-BR')}\n\n`;
 
   clientes.forEach(c => {
